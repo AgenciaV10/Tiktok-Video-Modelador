@@ -127,22 +127,25 @@ export const generateVeoPrompts = async (file: File): Promise<MachineReadableOut
   const videoPart = await fileToGenerativePart(file);
 
   const prompt = `
-    Você é um analista multimodal especializado. Sua tarefa é analisar meticulosamente o arquivo de vídeo fornecido e gerar um único objeto JSON estruturado que divide o vídeo em "takes" para um gerador de prompts VEO.
-    
-    **INSTRUÇÕES CRÍTICAS:**
-    1.  **SEM ALUCINAÇÕES:** Toda a sua análise DEVE ser baseada **exclusivamente** nas informações visuais e de áudio presentes no arquivo de vídeo fornecido. NÃO invente ações, sons, objetos ou diálogos.
-    2.  **Segmentação de Vídeo:**
-        -   Calcule a duração total do vídeo.
-        -   Divida o vídeo em segmentos contíguos ("takes") de exatamente ${TAKE_DURATION_S} segundos.
-        -   O último take deve ter a duração restante se for menor que ${TAKE_DURATION_S} segundos.
-    3.  **Para CADA take, realize a seguinte análise:**
-        -   **Transcrição de Áudio:** Ouça o áudio e transcreva quaisquer palavras faladas verbatim em **Português do Brasil (pt-BR)**. Se não houver fala, indique silêncio, música ou ruído no 'speech_meta'.
-        -   **Análise Visual:** Descreva todas as ações, movimentos, interações e mudanças na cena em **INGLÊS**. Seja preciso e use timestamps relativos ao início de cada take (ex: "0.5-1.2s").
-        -   **Continuidade:** Garanta que o 'start_state' de cada take reflita com precisão o 'end_state' do take anterior. Isso é crucial para uma geração de vídeo sem interrupções posteriormente.
-        -   **Geração de Prompt Veo3:** Para cada take, crie o campo 'veo3_prompt_en'. Deve estar em INGLÊS, mas o diálogo transcrito DEVE permanecer em pt-BR e estar entre aspas duplas. O prompt deve seguir o modelo: um parágrafo de resumo, depois marcadores para Ações, Câmera, Ambiente, Continuidade, Diálogo, Fundo de Áudio e Duração.
-    4.  **Formato de Saída:**
-        -   Sua saída final deve ser um **único objeto JSON** que corresponda perfeitamente ao schema fornecido.
-        -   Não inclua nenhum texto, explicações ou formatação markdown antes ou depois do objeto JSON.
+    Você é um analista de vídeo de elite, agindo como um "script supervisor" para um diretor de cinema. Sua tarefa é decompor o vídeo fornecido em uma análise quadro a quadro, capturando cada detalhe sutil e gerando um único objeto JSON estruturado para um gerador de prompts VEO. Sua atenção aos detalhes deve ser sobre-humana.
+
+    **REGRAS FUNDAMENTAIS E INEGOCIÁVEIS:**
+    1.  **FIDELIDADE ABSOLUTA (ZERO ALUCINAÇÃO):** Sua análise deve se basear **estritamente** no que é visto e ouvido no vídeo. É proibido inventar, inferir ou embelezar. Se uma ação é ambígua, descreva-a como tal.
+    2.  **ANÁLISE MICROSCÓPICA DE AÇÕES:**
+        -   **NÃO PERCA NADA.** Documente **TODOS** os movimentos, não importa quão pequenos. Isso inclui: gestos de mão (apontar, coçar, tocar), mudanças de expressão facial, direção do olhar, tiques, etc.
+        -   **Exemplo:** Se um ator coça o nariz, você DEVE registrar: \`{"t":"1.2-1.5", "actor":"A1", "action":"raises right hand and scratches the side of their nose with their index finger"}\`. Se ele aponta para algo fora da tela, registre: \`{"t":"3.4-4.0", "actor":"A1", "action":"points with their right index finger towards the bottom right of the frame"}\`.
+        -   **INTERAÇÕES COM OBJETOS:** Descreva a manipulação de objetos com extrema precisão. Como o objeto é segurado, girado, apresentado à câmera? Se um objeto é mostrado em detalhe (como o interior de uma chaleira), isso DEVE ser documentado. Ex: \`{"t":"5.1-6.3", "actor":"A1", "action":"tilts the kettle forward, bringing it close to the camera to show its interior"}\`.
+    3.  **SEGMENTAÇÃO E CONTINUIDADE:**
+        -   Calcule a duração total e divida em "takes" de ${TAKE_DURATION_S} segundos, com o último take sendo o restante.
+        -   A continuidade entre os takes é sagrada. O 'end_state' do take N deve ser uma descrição precisa da cena para que o 'start_state' do take N+1 seja uma continuação perfeita.
+    4.  **TRANSCRIÇÃO DE ÁUDIO (PT-BR):**
+        -   Transcreva o diálogo em **Português do Brasil (pt-BR)** com precisão literal. Mantenha palavras de preenchimento e pausas se forem significativas.
+        -   Se não houver fala, classifique corretamente em 'speech_meta' (silêncio, música, ruído).
+    5.  **PROMPT VEO3 (EM INGLÊS, DIÁLOGO EM PT-BR):**
+        -   Para cada take, construa o campo 'veo3_prompt_en'. A descrição deve estar em INGLÊS, mas o diálogo transcrito DEVE permanecer em pt-BR, dentro de aspas duplas ("...").
+        -   O prompt deve seguir o modelo rigoroso: parágrafo de resumo, seguido por marcadores para Ações, Câmera, Ambiente, Continuidade, Diálogo, Fundo de Áudio e Duração.
+    6.  **FORMATO DE SAÍDA JSON:**
+        -   Sua saída deve ser um **ÚNICO OBJETO JSON VÁLIDO**, sem nenhum texto, comentário ou formatação markdown fora do JSON. Aderência estrita ao schema fornecido é obrigatória.
   `;
 
   const response = await ai.models.generateContent({

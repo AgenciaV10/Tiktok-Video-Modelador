@@ -1,6 +1,7 @@
-
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Take } from '../types';
+import ClipboardIcon from './icons/ClipboardIcon';
+import CheckIcon from './icons/CheckIcon';
 
 interface TakeDisplayProps {
   take: Take;
@@ -14,6 +15,15 @@ const formatTime = (seconds: number): string => {
 };
 
 const TakeDisplay: React.FC<TakeDisplayProps> = ({ take, color }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(take.veo3_prompt_en).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [take.veo3_prompt_en]);
+
   return (
     <div 
         className="border-l-4 rounded-r-lg bg-gray-800/50 shadow-lg overflow-hidden" 
@@ -37,7 +47,16 @@ const TakeDisplay: React.FC<TakeDisplayProps> = ({ take, color }) => {
           </details>
 
           <div>
-            <h4 className="font-semibold text-gray-300 mb-2">Prompt Veo3 (EN, com falas em pt-BR):</h4>
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-semibold text-gray-300">Prompt Veo3 (EN, com falas em pt-BR):</h4>
+              <button
+                onClick={handleCopy}
+                className="p-1.5 bg-gray-700/60 hover:bg-gray-600/60 rounded-md transition-colors text-gray-400"
+                aria-label="Copiar Prompt do Take"
+              >
+                {copied ? <CheckIcon className="w-4 h-4 text-green-400" /> : <ClipboardIcon className="w-4 h-4" />}
+              </button>
+            </div>
             <div className="bg-gray-900/40 p-3 rounded-lg border border-gray-700">
                 <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
                     {take.veo3_prompt_en}

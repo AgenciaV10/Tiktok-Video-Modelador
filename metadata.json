@@ -1,5 +1,5 @@
 {
-  "name": "Video-to-Veo3 Mapper",
+  "name": "Tiktok Shop Video Modelador",
   "description": "An application that takes a user-uploaded video, analyzes it in 7-second segments, and generates structured VEO3 prompts with transcribed Brazilian Portuguese speech.",
   "requestFramePermissions": []
 }
