@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { MachineReadableOutput } from '../types';
 import TakeDisplay from './TakeDisplay';
@@ -9,14 +8,19 @@ interface AnalysisResultsProps {
   result: MachineReadableOutput;
 }
 
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-slate-200 to-slate-400 mb-6 pb-3 border-b-2 border-slate-800">
+    {children}
+  </h2>
+);
+
+
 const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-16">
       <div>
-        <h2 className="text-3xl font-bold mb-4 text-gray-200 border-b-2 border-gray-700 pb-2">
-          Análise dos Takes
-        </h2>
-        <div className="space-y-6">
+        <SectionTitle>Análise dos Takes</SectionTitle>
+        <div className="space-y-8">
           {result.takes.map((take, index) => (
             <TakeDisplay 
               key={take.take_id} 
@@ -30,11 +34,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ result }) => {
       <MasterPrompt takes={result.takes} />
 
       <div>
-        <h2 className="text-3xl font-bold mb-4 text-gray-200 border-b-2 border-gray-700 pb-2">
-          JSON Completo
-        </h2>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-           <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-x-auto">
+        <SectionTitle>JSON Completo</SectionTitle>
+        <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 max-h-[400px] overflow-y-auto shadow-inner">
+           <pre className="text-sm text-slate-300 whitespace-pre-wrap break-words overflow-x-auto font-mono">
              {JSON.stringify(result, null, 2)}
            </pre>
         </div>

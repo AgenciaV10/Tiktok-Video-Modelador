@@ -1,5 +1,5 @@
 {
-  "name": "Tiktok Shop Video Modelador",
+  "name": "Modele Qualquer Video do TikTok Shop",
   "description": "An application that takes a user-uploaded video, analyzes it in 7-second segments, and generates structured VEO3 prompts with transcribed Brazilian Portuguese speech.",
   "requestFramePermissions": []
 }

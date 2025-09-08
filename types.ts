@@ -1,4 +1,3 @@
-
 export interface Timecode {
   start_s: number;
   end_s: number;
@@ -58,4 +57,27 @@ export interface MachineReadableOutput {
   video_duration_s: number;
   take_size_s: number;
   takes: Take[];
+}
+
+export interface TikTokData {
+  id: string;
+  play: string;
+  cover: string;
+  music: string;
+  author: {
+    nickname: string;
+  };
+  title: string;
+}
+
+export interface TikTokApiResponse {
+    code: number;
+    msg: string;
+    data: TikTokData;
+}
+
+export interface EditImageOptions {
+  baseImage: File;
+  prompt: string;
+  referenceImage?: File | null;
 }

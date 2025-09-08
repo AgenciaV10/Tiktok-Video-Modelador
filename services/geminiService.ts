@@ -2,10 +2,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { MachineReadableOutput } from '../types';
 import { TAKE_DURATION_S } from '../constants';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set.");
-}
-
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper para converter o objeto File em uma GenerativePart para o Gemini.
