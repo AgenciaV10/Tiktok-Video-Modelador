@@ -7,9 +7,15 @@ Não altere o ângulo da câmera ou a pose do personagem.
 `;
 
 export const ACTION_SWAP_CHARACTER = `
-Substitua o personagem principal na imagem pelo personagem da imagem de referência.
-Integre o novo personagem de forma realista na cena, combinando a iluminação e o estilo da imagem original.
-Mantenha a pose do novo personagem o mais próximo possível da pose do personagem original.
+**OBJETIVO PRINCIPAL:** Substituir o personagem principal da imagem base pelo personagem da imagem de referência.
+
+**REGRAS CRÍTICAS E INEGOCIÁVEIS:**
+
+1.  **SUBSTITUIÇÃO PRECISA:** Identifique o personagem principal na imagem base e substitua-o **INTEIRAMENTE** pelo personagem fornecido na imagem de referência. Apenas o personagem deve ser alterado.
+2.  **PRESERVAÇÃO DO FUNDO:** O fundo, os objetos de cena, e quaisquer outros elementos que não sejam o personagem principal devem ser mantidos **EXATAMENTE** como estão na imagem original. Não adicione, remova ou altere nada no cenário.
+3.  **INTEGRAÇÃO REALISTA:** O novo personagem deve ser integrado de forma realista à cena, correspondendo perfeitamente à iluminação, sombras, temperatura de cor e estilo geral da imagem original.
+4.  **MANUTENÇÃO DA POSE:** A pose do novo personagem deve replicar a pose do personagem original da forma mais fiel possível.
+5.  **DIMENSÕES E ENQUADRAMENTO (MUITO IMPORTANTE):** A imagem gerada deve ter **EXATAMENTE AS MESMAS DIMENSÕES** da imagem original (9:16). É **PROIBIDO** cortar a imagem, adicionar letterboxing (barras pretas) ou alterar o enquadramento de qualquer forma. O resultado final deve ser um frame de 9:16 completo.
 `;
 
 export const ACTION_SWAP_BLUSA = `

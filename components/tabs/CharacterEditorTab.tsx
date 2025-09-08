@@ -1,11 +1,18 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { editImage } from '../../services/imageEditingService';
+import { extractFramesFromVideo } from '../../services/videoService';
 import Loader from '../Loader';
 import * as Prompts from '../../prompts';
 
 interface CharacterEditorTabProps {
     videoFile: File | null;
     setVideoFile: (file: File | null) => void;
+}
+
+interface FrameData {
+    dataUrl: string;
+    timestamp: number;
 }
 
 const EditSection: React.FC<{ title: string; children: React.ReactNode; }> = ({ title, children }) => (
@@ -42,67 +49,101 @@ const CharacterEditorTab: React.FC<CharacterEditorTabProps> = ({ videoFile }) =>
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
+    // New states for the filmstrip frame selector
+    const [thumbnails, setThumbnails] = useState<FrameData[]>([]);
+    const [selectedFrame, setSelectedFrame] = useState<FrameData | null>(null);
+    const [isExtracting, setIsExtracting] = useState(false);
+
     const videoSrc = videoFile ? URL.createObjectURL(videoFile) : null;
 
     useEffect(() => {
+        // Cleanup object URL on component unmount
         return () => { if (videoSrc) URL.revokeObjectURL(videoSrc); };
     }, [videoSrc]);
 
-    const handleCaptureFrame = useCallback(() => {
-        if (videoRef.current) {
-            const video = videoRef.current;
-            const targetWidth = 576;
-            const targetHeight = 1024;
+    useEffect(() => {
+        // Automatically extract frames when a new video file is provided
+        if (videoFile) {
+            setIsExtracting(true);
+            setThumbnails([]);
+            setSelectedFrame(null);
+            setOriginalFrame(null);
+            setOriginalFrameUrl(null);
+            setError(null);
 
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-
-            if (ctx) {
-                const videoWidth = video.videoWidth;
-                const videoHeight = video.videoHeight;
-                const videoAspectRatio = videoWidth / videoHeight;
-                const targetAspectRatio = targetWidth / targetHeight;
-
-                let sWidth = videoWidth;
-                let sHeight = videoHeight;
-                let sx = 0;
-                let sy = 0;
-                
-                // 'cover' logic: crop the source image to fit the target aspect ratio
-                if (videoAspectRatio > targetAspectRatio) {
-                    // Video is wider than target, crop sides
-                    sWidth = videoHeight * targetAspectRatio;
-                    sx = (videoWidth - sWidth) / 2;
-                } else {
-                    // Video is taller than target, crop top/bottom
-                    sHeight = videoWidth / targetAspectRatio;
-                    sy = (videoHeight - sHeight) / 2;
-                }
-
-                ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
-
-                const dataUrl = canvas.toDataURL('image/png');
-                setOriginalFrameUrl(dataUrl);
-
-                canvas.toBlob(blob => {
-                    if (blob) {
-                        const file = new File([blob], "frame.png", { type: "image/png" });
-                        setOriginalFrame(file);
-                        // Reset all edits when a new frame is captured
-                        setEditedImageUrl(null);
-                        setLastEditedImageFile(null);
-                        setCharacterRef(null);
-                        setBlusaRef(null);
-                        setCalcaRef(null);
-                        setChatPrompt('');
-                        setError(null);
+            extractFramesFromVideo(videoFile, 24)
+                .then(frames => {
+                    setThumbnails(frames);
+                    if (frames.length > 0) {
+                        setSelectedFrame(frames[0]);
                     }
-                }, 'image/png');
-            }
+                })
+                .catch(err => {
+                    console.error("Failed to extract frames:", err);
+                    setError("Não foi possível extrair os frames do vídeo.");
+                })
+                .finally(() => {
+                    setIsExtracting(false);
+                });
         }
-    }, []);
+    }, [videoFile]);
+
+    const handleConfirmFrame = useCallback(() => {
+        if (videoRef.current && selectedFrame) {
+            const video = videoRef.current;
+            
+            // This function is called once the video has seeked to the correct time
+            const onSeeked = () => {
+                const targetWidth = 576;
+                const targetHeight = 1024;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (ctx) {
+                    const videoWidth = video.videoWidth;
+                    const videoHeight = video.videoHeight;
+                    const videoAspectRatio = videoWidth / videoHeight;
+                    const targetAspectRatio = targetWidth / targetHeight;
+
+                    let sWidth = videoWidth;
+                    let sHeight = videoHeight;
+                    let sx = 0;
+                    let sy = 0;
+                    
+                    if (videoAspectRatio > targetAspectRatio) {
+                        sWidth = videoHeight * targetAspectRatio;
+                        sx = (videoWidth - sWidth) / 2;
+                    } else {
+                        sHeight = videoWidth / targetAspectRatio;
+                        sy = (videoHeight - sHeight) / 2;
+                    }
+
+                    ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
+
+                    const dataUrl = canvas.toDataURL('image/png');
+                    setOriginalFrameUrl(dataUrl);
+
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            const file = new File([blob], "frame.png", { type: "image/png" });
+                            setOriginalFrame(file);
+                            // Reset edits when a new frame is confirmed
+                            setEditedImageUrl(null);
+                            setLastEditedImageFile(null);
+                            setError(null);
+                        }
+                    }, 'image/png');
+                }
+                video.removeEventListener('seeked', onSeeked); // Cleanup listener
+            };
+            
+            video.addEventListener('seeked', onSeeked, { once: true });
+            video.currentTime = selectedFrame.timestamp;
+        }
+    }, [selectedFrame]);
     
     const handleEdit = async (action: 'character' | 'blusa' | 'calca' | 'hair' | 'chat') => {
         const baseImage = lastEditedImageFile || originalFrame;
@@ -169,13 +210,43 @@ const CharacterEditorTab: React.FC<CharacterEditorTabProps> = ({ videoFile }) =>
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
             <div className="bg-slate-800/50 rounded-xl border border-slate-700 shadow-xl p-6">
-                 <h2 className="text-2xl font-bold text-slate-200 mb-4">1. Selecionar Frame</h2>
-                <div className="w-full max-w-2xl mx-auto">
-                    <video ref={videoRef} src={videoSrc ?? undefined} controls className="w-full rounded-lg shadow-md bg-black aspect-[9/16] object-contain"></video>
-                    <button onClick={handleCaptureFrame} className="mt-4 w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold transition-all duration-300 shadow-lg shadow-indigo-500/30 transform hover:scale-105">
-                        Capturar Frame Atual (576x1024)
-                    </button>
-                </div>
+                <h2 className="text-2xl font-bold text-slate-200 mb-4">1. Selecionar Frame</h2>
+                
+                {/* This video element is hidden. It's used as a high-quality source for canvas rendering. */}
+                <video ref={videoRef} src={videoSrc ?? undefined} className="hidden" crossOrigin="anonymous"></video>
+                
+                {isExtracting && <Loader message="Extraindo frames do vídeo..." />}
+                
+                {!isExtracting && thumbnails.length > 0 && (
+                    <div className="w-full max-w-4xl mx-auto">
+                        {/* Main Preview */}
+                        <div className="mb-4 bg-black rounded-lg shadow-md flex justify-center items-center aspect-[9/16] max-w-sm mx-auto border border-slate-700">
+                           {selectedFrame ? (
+                                <img src={selectedFrame.dataUrl} alt="Frame selecionado" className="max-h-full max-w-full object-contain rounded-lg" />
+                           ) : (
+                                <p className="text-slate-500">Selecione um frame abaixo</p>
+                           )}
+                        </div>
+
+                        {/* Filmstrip */}
+                        <div className="flex overflow-x-auto space-x-2 p-2 bg-slate-900/50 rounded-lg border border-slate-700 custom-scrollbar">
+                            {thumbnails.map((frame, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setSelectedFrame(frame)}
+                                    className={`flex-shrink-0 w-20 h-32 sm:w-24 sm:h-36 rounded-md overflow-hidden transition-all duration-200 focus:outline-none ring-offset-2 ring-offset-slate-900 ${selectedFrame?.timestamp === frame.timestamp ? 'ring-2 ring-purple-500 scale-105' : 'hover:scale-105 opacity-70 hover:opacity-100'}`}
+                                    aria-label={`Selecionar frame ${index + 1}`}
+                                >
+                                    <img src={frame.dataUrl} alt={`Frame ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <button onClick={handleConfirmFrame} disabled={!selectedFrame} className="mt-6 w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold transition-all duration-300 shadow-lg shadow-indigo-500/30 transform hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed">
+                            Confirmar Frame (576x1024)
+                        </button>
+                    </div>
+                )}
             </div>
 
             {originalFrameUrl && (
