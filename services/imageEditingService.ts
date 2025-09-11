@@ -25,21 +25,27 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const editImage = async ({ baseImage, prompt, referenceImage }: EditImageOptions): Promise<string> => {
+    // Re-structured the `parts` array to be more explicit and unambiguous for the Gemini model.
+    // Instead of sending images and then a block of text, each image is now "labeled" with
+    // a preceding text part, clearly defining its role in the editing process.
+    // This directly addresses the issue where the model failed to associate the reference image
+    // with the character swap instruction.
+    const parts: ({ inlineData: { data: string; mimeType: string; } } | { text: string })[] = [];
+
+    // 1. Label and add the base image
+    parts.push({ text: 'Esta é a imagem base que precisa ser editada:' });
     const baseImagePart = await fileToGenerativePart(baseImage);
-    // FIX: Explicitly type the array to allow both image and text parts.
-    // Without this, TypeScript infers the array type from the first element only (an image part),
-    // causing a type error when a text part is pushed later.
-    const imageParts: ({ inlineData: { data: string; mimeType: string; } } | { text: string })[] = [baseImagePart];
+    parts.push(baseImagePart);
 
+    // 2. If a reference image exists, label and add it
     if (referenceImage) {
+        parts.push({ text: 'Esta é a imagem de referência para a substituição (personagem ou item):' });
         const referenceImagePart = await fileToGenerativePart(referenceImage);
-        // Add a text hint for the reference image's role
-        imageParts.push({ text: 'Reference image for the character/item:' });
-        imageParts.push(referenceImagePart);
+        parts.push(referenceImagePart);
     }
-
-    const fullPrompt = `${prompt}`;
-    const parts = [...imageParts, { text: fullPrompt }];
+    
+    // 3. Add the final detailed instructions
+    parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
@@ -57,5 +63,5 @@ export const editImage = async ({ baseImage, prompt, referenceImage }: EditImage
         }
     }
 
-    throw new Error("No image was generated in the response.");
+    throw new Error("Nenhuma imagem foi gerada na resposta.");
 };
