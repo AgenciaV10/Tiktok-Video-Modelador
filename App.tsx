@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import TiktokDownloaderTab from './components/tabs/TiktokDownloaderTab';
 import CharacterEditorTab from './components/tabs/CharacterEditorTab';
 import VideoAnalysisTab from './components/tabs/VideoAnalysisTab';
+import type { MachineReadableOutput } from './types';
+import { generateVeoPrompts } from './services/geminiService';
+
 
 type Tab = 'tiktok' | 'character' | 'analysis';
 
@@ -22,18 +25,41 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 const App: React.FC = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('tiktok');
+  
+  // State for video analysis, lifted up from VideoAnalysisTab
+  const [analysisResult, setAnalysisResult] = useState<MachineReadableOutput | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'tiktok':
-        return <TiktokDownloaderTab onVideoDownloaded={setVideoFile} />;
-      case 'character':
-        return <CharacterEditorTab videoFile={videoFile} setVideoFile={setVideoFile} />;
-      case 'analysis':
-        return <VideoAnalysisTab videoFile={videoFile} setVideoFile={setVideoFile} />;
-      default:
-        return null;
+  const handleStartAnalysis = useCallback(async (file: File) => {
+    if (isAnalyzing) return; // Prevent multiple analyses at once
+
+    setVideoFile(file); // Ensure the correct file is set
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    try {
+        const results = await generateVeoPrompts(file);
+        setAnalysisResult(results);
+    } catch (err) {
+        console.error(err);
+        setAnalysisError('Ocorreu um erro ao analisar o vídeo. Por favor, verifique o console para mais detalhes e tente novamente.');
+    } finally {
+        setIsAnalyzing(false);
     }
+  }, [isAnalyzing]);
+  
+  const handleVideoSelectedFromDownloader = (file: File) => {
+      setVideoFile(file);
+      // Don't auto-start analysis, let the user navigate
+  };
+
+  const handleResetAnalysis = () => {
+      setVideoFile(null);
+      setAnalysisResult(null);
+      setAnalysisError(null);
+      setIsAnalyzing(false);
   };
 
   return (
@@ -62,7 +88,23 @@ const App: React.FC = () => {
         </nav>
 
         <main className="max-w-7xl mx-auto">
-          {renderTabContent()}
+          <div style={{ display: activeTab === 'tiktok' ? 'block' : 'none' }}>
+            <TiktokDownloaderTab onVideoDownloaded={handleVideoSelectedFromDownloader} />
+          </div>
+          <div style={{ display: activeTab === 'character' ? 'block' : 'none' }}>
+            <CharacterEditorTab videoFile={videoFile} setVideoFile={setVideoFile} />
+          </div>
+          <div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
+            <VideoAnalysisTab 
+              videoFile={videoFile} 
+              setVideoFile={setVideoFile} 
+              analysisResult={analysisResult}
+              isAnalyzing={isAnalyzing}
+              analysisError={analysisError}
+              startAnalysis={handleStartAnalysis}
+              onReset={handleResetAnalysis}
+            />
+          </div>
         </main>
         
         <footer className="text-center mt-20 text-gray-500 text-sm">

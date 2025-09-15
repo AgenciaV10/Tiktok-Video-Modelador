@@ -49,3 +49,19 @@ Esta é uma reedição, então aplique a alteração na última imagem gerada.
 Comando do usuário: "${instruction}"
 `;
 };
+
+export const ACTION_CONTINUATION_EDIT = (instruction: string): string => {
+    return `
+**OBJETIVO PRINCIPAL:** Criar um frame de continuação de cena, usando a imagem fornecida como ponto de partida.
+
+**REGRAS CRÍTICAS E INEGOCIÁVEIS:**
+
+1.  **PONTO DE PARTIDA:** A imagem fornecida é o "frame anterior". Sua tarefa é gerar o "próximo frame" com base na instrução do usuário.
+2.  **CONSISTÊNCIA DE PERSONAGEM:** O personagem na imagem deve ser mantido **VISUALMENTE IDÊNTICO** (mesmo rosto, cabelo, corpo, roupas), a menos que a instrução peça explicitamente uma alteração em sua aparência. A identidade do personagem é sagrada.
+3.  **MODIFICAÇÃO PRECISA:** Aplique **APENAS** a modificação solicitada na instrução do usuário. Não altere outros elementos da cena desnecessariamente.
+4.  **INTEGRAÇÃO REALISTA:** As modificações (nova pose, expressão, mudança de cenário) devem ser integradas de forma fotorrealista, respeitando a iluminação, sombras e estilo da imagem original.
+5.  **DIMENSÕES E ENQUADRAMENTO:** Mantenha **EXATAMENTE AS MESMAS DIMENSÕES E PROPORÇÃO** da imagem original. Não corte ou altere o enquadramento.
+
+**Instrução do Usuário:** "${instruction}"
+`;
+};

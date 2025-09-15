@@ -81,3 +81,8 @@ export interface EditImageOptions {
   prompt: string;
   referenceImage?: File | null;
 }
+
+export interface HistoryItem {
+    data: TikTokData;
+    addedAt: string; // ISO 8601 string
+}

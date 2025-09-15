@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import type { TikTokData } from '../../types';
+import React, { useState, useEffect } from 'react';
+import type { TikTokData, HistoryItem } from '../../types';
 import { getTikTokData } from '../../services/tiktokService';
+import * as storageService from '../../services/storageService';
+import TrashIcon from '../icons/TrashIcon';
 
 interface TiktokDownloaderTabProps {
   onVideoDownloaded: (file: File) => void;
@@ -13,6 +15,11 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
   const [tikTokData, setTikTokData] = useState<TikTokData | null>(null);
   const [tikTokError, setTikTokError] = useState<string | null>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    setHistory(storageService.getHistory());
+  }, []);
 
   const handleTikTokFetch = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -26,6 +33,8 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
       try {
           const data = await getTikTokData(tiktokUrl);
           setTikTokData(data);
+          const newHistory = storageService.saveVideoToHistory(data);
+          setHistory(newHistory);
       } catch (err) {
           setTikTokError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
       } finally {
@@ -62,6 +71,20 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
     } finally {
       setIsDownloading('');
     }
+  };
+  
+  const handleLoadFromHistory = (data: TikTokData) => {
+    setTikTokData(data);
+    setTikTokError(null);
+    setVideoLoaded(false);
+    setTiktokUrl(`https://www.tiktok.com/@${data.author.nickname}/video/${data.id}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteFromHistory = (e: React.MouseEvent, videoId: string) => {
+    e.stopPropagation(); // Prevent the card's onClick from firing
+    const newHistory = storageService.removeVideoFromHistory(videoId);
+    setHistory(newHistory);
   };
 
   return (
@@ -127,6 +150,42 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
               </div>
           )}
        </div>
+
+       {history.length > 0 && (
+          <div className="mt-12 pt-6 border-t border-slate-700">
+            <h3 className="text-2xl font-bold text-slate-200 mb-4">Histórico de Vídeos</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {history.map((item) => (
+                <div 
+                  key={item.data.id} 
+                  onClick={() => handleLoadFromHistory(item.data)}
+                  className="group bg-slate-800 rounded-lg border border-slate-700/80 overflow-hidden cursor-pointer transition-all duration-300 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-900/30 hover:-translate-y-1"
+                  title={`Carregar vídeo de @${item.data.author.nickname}`}
+                >
+                  <div className="relative aspect-[9/16] w-full bg-black">
+                    <img src={item.data.cover} alt={item.data.title || 'Capa do vídeo'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
+                        <p className="font-bold text-white text-xs line-clamp-2" title={item.data.title || 'Vídeo do TikTok'}>
+                            {item.data.title || 'Vídeo do TikTok'}
+                        </p>
+                    </div>
+                    <button 
+                        onClick={(e) => handleDeleteFromHistory(e, item.data.id)} 
+                        className="absolute top-1.5 right-1.5 z-10 p-1.5 bg-black/50 rounded-full text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-200 backdrop-blur-sm"
+                        aria-label="Excluir do histórico"
+                    >
+                        <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs text-slate-400 truncate">@{item.data.author.nickname}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">{new Date(item.addedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
     </div>
   );
 };
