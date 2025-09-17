@@ -156,10 +156,10 @@ export const generateVeoPrompts = async (file: File): Promise<MachineReadableOut
 
     6.  **PROMPT VEO3 (EM INGLÊS, DIÁLOGO EM PT-BR):**
         -   Para cada take, construa o campo 'veo3_prompt_en'. Este é o campo mais importante para o usuário.
-        -   **NÃO FAÇA RESUMOS!** O objetivo deste prompt é ser **longo, rico e explicitamente detalhado**. Sintetize **TODAS** as micro-ações, expressões faciais, interações E, crucialmente, **as regras de física em jogo** que você analisou. O prompt deve ser um manual de instruções para um animador de IA que não tem conhecimento prévio de como os objetos interagem no mundo real.
+        -   **ESTRUTURA OBRIGATÓRIA:** O prompt **DEVE** começar com a transcrição do áudio, formatada **EXATAMENTE** assim: \`“Video language: Portuguese (Brazilian)” "A FALA EM PT-BR VEM AQUI."\` Se não houver fala, esta linha deve ser omitida.
+        -   **NÃO FAÇA RESUMOS!** Após o bloco de áudio, o objetivo do prompt é ser **longo, rico e explicitamente detalhado**. Sintetize **TODAS** as micro-ações, expressões faciais, interações E, crucialmente, **as regras de física em jogo** que você analisou. O prompt deve ser um manual de instruções para um animador de IA que não tem conhecimento prévio de como os objetos interagem no mundo real.
         -   **Incorpore a Causa e Efeito Físico:** Sua narrativa deve deixar claro como os objetos interagem. Por exemplo, descreva como a luz reflete no material, como um tecido se dobra sob o toque, ou como um objeto pesado resiste ao movimento inicial (inércia).
-        -   O prompt deve seguir o modelo rigoroso: um parágrafo de descrição detalhada, seguido por marcadores.
-        -   O diálogo transcrito DEVE permanecer em **pt-BR**, dentro de aspas duplas ("...") e ser rotulado com o marcador: \`- Dialogue pt-br:\`.
+        -   O prompt deve seguir o modelo rigoroso: bloco de áudio (se houver), seguido por um parágrafo de descrição detalhada e marcadores.
 
     7.  **FORMATO DE SAÍDA JSON:**
         -   Sua saída deve ser um **ÚNICO OBJETO JSON VÁLIDO**, sem nenhum texto, comentário ou formatação markdown fora do JSON. Aderência estrita ao schema fornecido é obrigatória.

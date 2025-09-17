@@ -44,18 +44,23 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
 
   const handleDownload = async (url: string, filename: string, type: 'video' | 'audio' | 'image') => {
     setIsDownloading(filename);
+    setTikTokError(null);
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Falha no download do arquivo.');
+      // Use a CORS proxy to fetch the media data. Direct fetching is blocked by CORS policy on the media server.
+      // Switched to a new proxy due to fetch errors.
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        throw new Error(`A resposta da rede não foi bem-sucedida (status: ${response.status})`);
+      }
       const blob = await response.blob();
       
       if (type === 'video') {
         const file = new File([blob], filename, { type: blob.type });
         onVideoDownloaded(file);
         setVideoLoaded(true);
-        // Do not download the file, just load it into the app state
       } else {
-        // For audio and image, proceed with the download
+        // For audio and image, proceed with the user-facing download
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -67,7 +72,10 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
       }
     } catch (error) {
       console.error('Erro no download:', error);
-      alert('Não foi possível baixar o arquivo.');
+      const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+      const userFriendlyMessage = `Não foi possível carregar o arquivo. O serviço de download pode estar offline ou bloqueando o acesso. Detalhes: ${errorMessage}`;
+      setTikTokError(userFriendlyMessage);
+      alert(userFriendlyMessage);
     } finally {
       setIsDownloading('');
     }
@@ -119,8 +127,8 @@ const TiktokDownloaderTab: React.FC<TiktokDownloaderTabProps> = ({ onVideoDownlo
               <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 animate-fade-in">
                   {videoLoaded ? (
                       <div className="text-center p-4 bg-green-900/30 border border-green-700/50 rounded-md">
-                          <p className="font-bold text-lg text-green-300">✅ Vídeo Carregado!</p>
-                          <p className="text-green-400 mt-2">O vídeo foi carregado no aplicativo. Prossiga para as próximas abas para começar a edição e análise.</p>
+                          <p className="font-bold text-lg text-green-300">✅ Vídeo Carregado e Análise Iniciada!</p>
+                          <p className="text-green-400 mt-2">A análise do vídeo começou em segundo plano. Você pode ir para a aba "Personagem" para editar um frame enquanto aguarda. O resultado estará pronto na aba "Analisar Vídeo".</p>
                       </div>
                   ) : (
                       <div className="flex flex-col sm:flex-row gap-4">

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import type { Take } from '../types';
 import ClipboardIcon from './icons/ClipboardIcon';
 import CheckIcon from './icons/CheckIcon';
@@ -15,14 +15,42 @@ const formatTime = (seconds: number): string => {
 };
 
 const TakeDisplay: React.FC<TakeDisplayProps> = ({ take, color }) => {
-  const [copied, setCopied] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [jsonCopied, setJsonCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopyPrompt = useCallback(() => {
     navigator.clipboard.writeText(take.veo3_prompt_en).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
     });
   }, [take.veo3_prompt_en]);
+
+  const handleCopyJson = useCallback(() => {
+    const jsonString = JSON.stringify(take, null, 2);
+    navigator.clipboard.writeText(jsonString).then(() => {
+        setJsonCopied(true);
+        setTimeout(() => setJsonCopied(false), 2000);
+    });
+  }, [take]);
+
+  // Analisa o prompt para separar a parte da fala da descrição.
+  const [speechPart, descriptionPart] = useMemo(() => {
+    const prompt = take.veo3_prompt_en;
+    // Regex para capturar a linha de fala inicial.
+    const speechRegex = /^(“Video language: Portuguese \(Brazilian\)”\s*".*?")/s;
+    const match = prompt.match(speechRegex);
+
+    if (match && match[1]) {
+      const speech = match[1];
+      // Pega o resto da string, removendo espaços/quebras de linha no início.
+      const description = prompt.substring(speech.length).trim();
+      return [speech, description];
+    }
+
+    // Nenhuma parte de fala encontrada, retorna o prompt inteiro como descrição.
+    return [null, prompt];
+  }, [take.veo3_prompt_en]);
+
 
   return (
     <div 
@@ -42,23 +70,41 @@ const TakeDisplay: React.FC<TakeDisplayProps> = ({ take, color }) => {
             <div className="flex justify-between items-center mb-2">
               <h4 className="font-semibold text-slate-300">Prompt VEO (EN, com falas em pt-BR)</h4>
               <button
-                onClick={handleCopy}
+                onClick={handleCopyPrompt}
                 className="p-1.5 bg-slate-700/60 hover:bg-slate-600/60 rounded-md transition-colors text-slate-400"
                 aria-label="Copiar Prompt do Take"
               >
-                {copied ? <CheckIcon className="w-5 h-5 text-green-400" /> : <ClipboardIcon className="w-5 h-5" />}
+                {promptCopied ? <CheckIcon className="w-5 h-5 text-green-400" /> : <ClipboardIcon className="w-5 h-5" />}
               </button>
             </div>
             <div className="bg-slate-900/70 p-3 rounded-lg border border-slate-700/80 shadow-inner">
                 <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words font-mono">
-                    {take.veo3_prompt_en}
+                    {speechPart && (
+                      <>
+                        <span className="text-cyan-300 font-semibold">{speechPart}</span>
+                        {'\n\n'}
+                      </>
+                    )}
+                    {descriptionPart}
                 </pre>
             </div>
           </div>
           
           <details className="bg-slate-900/40 rounded-lg group border border-slate-700/50">
             <summary className="cursor-pointer p-3 font-semibold text-slate-400 hover:text-slate-200 list-none flex justify-between items-center transition-colors">
-              <span>Resumo em JSON</span>
+              <div className="flex items-center gap-4">
+                <span>Resumo em JSON</span>
+                <button
+                    onClick={(e) => {
+                        e.preventDefault(); // Impede que o <details> seja aberto/fechado
+                        handleCopyJson();
+                    }}
+                    className="p-1.5 bg-slate-700/60 hover:bg-slate-600/60 rounded-md transition-colors text-slate-400"
+                    aria-label="Copiar JSON do Take"
+                >
+                    {jsonCopied ? <CheckIcon className="w-5 h-5 text-green-400" /> : <ClipboardIcon className="w-5 h-5" />}
+                </button>
+              </div>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 transition-transform duration-300 group-open:rotate-180">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
               </svg>
